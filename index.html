@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Metadata and Mapbox script/style imports -->
   <meta charset="utf-8" />
   <title>NYC Community Development Block Grant (CDBG) Eligibility and Transit Availability</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Importing Mapbox GL JS library and geocoder plugin -->
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.min.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
-  <link
-    rel="stylesheet"
-    href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.css"
-    type="text/css"
-  />
+  <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.css" type="text/css" />
+
+  <!-- Custom CSS styling for layout, map container, title box, search bar, and legend -->
   <style>
     body {
       margin: 0;
@@ -25,6 +26,7 @@
       width: 100%;
     }
 
+    /* Styling the title and description box */
     .title-box {
       position: absolute;
       top: 10px;
@@ -39,6 +41,7 @@
       z-index: 1;
     }
 
+    /* Search bar styling */
     .search-wrapper {
       margin-top: 8px;
       display: flex;
@@ -70,6 +73,7 @@
       background-color: #4682b4;
     }
 
+    /* Legend styling for color indicators */
     .legend {
       position: absolute;
       bottom: 20px;
@@ -104,7 +108,9 @@
     }
   </style>
 </head>
+
 <body>
+  <!-- Title and description with search bar input -->
   <div class="title-box">
     <h1 style="margin: 0; font-size: 20px;">
       NYC Community Development Block Grant (CDBG) Eligibility and Transit Availability
@@ -118,8 +124,10 @@
     </div>
   </div>
 
+  <!-- Main map container -->
   <div id="map"></div>
 
+  <!-- Legend explaining the color codes used on the map -->
   <div class="legend">
     <h4>Legend</h4>
     <div class="legend-item">
@@ -137,48 +145,55 @@
   </div>
 
   <script>
+    // Set your Mapbox access token
     mapboxgl.accessToken = 'pk.eyJ1IjoiYWgzODYzIiwiYSI6ImNtOWJ2ZzJoMDBreHIyanBuYmFvb3lvam0ifQ.Zeg12vyxmHuz86vEocSGdw';
 
+    // Initialize the map centered on Brooklyn, NYC
     const map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/mapbox/light-v11',
-      center: [-73.92995, 40.73400], // Brooklyn center
+      center: [-73.92995, 40.73400],
       zoom: 10
     });
 
+    // Restrict the user from panning too far outside NYC
     map.setMaxBounds([
       [-74.2557, 40.4961], // Southwest corner of NYC
       [-73.6895, 40.9155]  // Northeast corner of NYC
     ]);
 
+    // Once the map has loaded, add data layers
     map.on('load', () => {
+      // Add GeoJSON source for CDBG eligibility areas
       map.addSource('community_eligible', {
         type: 'geojson',
         data: './data/community_eligible.geojson'
       });
 
+      // Add a fill layer visualizing CDBG eligibility with color codes
       map.addLayer({
-  id: 'community-layer',
-  type: 'fill',
-  source: 'community_eligible',
-  paint: {
-    'fill-color': [
-      'match',
-      ['get', 'Eligibility'],
-      'CD Eligible', '#fdbb84',
-      'Ineligible', '#fef0d9',
-      '#ccc' // fallback
-    ],
-    'fill-opacity': 0.7
-  }
-});
+        id: 'community-layer',
+        type: 'fill',
+        source: 'community_eligible',
+        paint: {
+          'fill-color': [
+            'match',
+            ['get', 'Eligibility'],
+            'CD Eligible', '#fdbb84',  // Orange-ish color for eligible
+            'Ineligible', '#fef0d9',  // Light color for ineligible
+            '#ccc' // Fallback gray
+          ],
+          'fill-opacity': 0.7
+        }
+      });
 
-
+      // Add GeoJSON source for transportation/transit access points
       map.addSource('transportation', {
         type: 'geojson',
         data: './data/transportation.geojson'
       });
 
+      // Add circle layer to display transit points as dots
       map.addLayer({
         id: 'transit-points',
         type: 'circle',
@@ -192,16 +207,19 @@
       });
     });
 
-    // Geocoder functionality
+    // Handle address search functionality when search button is clicked
     document.getElementById('search-button').addEventListener('click', async () => {
       const query = document.getElementById('address-input').value;
       if (!query) return;
 
+      // Use Mapbox Geocoding API to get coordinates for the input address
       const geocodeUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxgl.accessToken}&limit=1&proximity=-73.935242,40.730610`;
 
       try {
         const response = await fetch(geocodeUrl);
         const data = await response.json();
+
+        // If results found, fly to the location and add a marker
         if (data.features && data.features.length > 0) {
           const [lng, lat] = data.features[0].center;
           map.flyTo({ center: [lng, lat], zoom: 14 });
